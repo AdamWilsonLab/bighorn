@@ -1,22 +1,7 @@
----
-title: "bighorn_trees"
-output: github_document
-editor_options: 
-  chunk_output_type: console
----
+bighorn\_trees
+================
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-#devtools::install_github('hunter-stanke/rFIA')
-library(rFIA)
-library(sf)
-library(smoothr)
-library(tidyverse)
-```
-
-
-```{r}
-# download from https://data.fs.usda.gov/geodata/edw/datasets.php?dsetCategory=boundaries
+``` r
 nf=read_sf("data/S_USA.AdministrativeForest/S_USA.AdministrativeForest.shp")
 bighorn=dplyr::filter(nf,FORESTNAME=="Bighorn National Forest") 
 
@@ -26,27 +11,30 @@ bighorn=dplyr::filter(nf,FORESTNAME=="Bighorn National Forest")
 fia_all=readFIA(states = c('WY'),dir = 'data/')
 
 fia <- clipFIA(fia_all, mostRecent = F, mask = bighorn)
-
 ```
 
-```{r}
-
+``` r
 ggplot(bighorn[1])+
   geom_sf()+
   geom_point(data=fia$PLOT,
              mapping=aes(y=LAT,x=LON),inherit.aes = F)
+```
 
+![](bighorn_trees_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+``` r
 ## Spatial plots with biomass 
 bio_pltSF <- biomass(fia, byPlot = TRUE, returnSpatial = TRUE)
 ```
 
-```{r}
+``` r
 ## Plot the results using default sf method
 plot(bio_pltSF)
 ```
 
+![](bighorn_trees_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
-```{r}
+``` r
 ## Group estimates by species
 fia_species <- tpa(fia, bySpecies = TRUE)
 
@@ -59,3 +47,4 @@ plotFIA(fia_spsc, y = BAA, grp = COMMON_NAME,
         plot.title = 'Grouped size class distribution')
 ```
 
+![](bighorn_trees_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
