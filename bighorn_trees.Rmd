@@ -15,29 +15,59 @@ library(tidyverse)
 ```
 
 
+## Download forest boundary
 ```{r}
 # download from https://data.fs.usda.gov/geodata/edw/datasets.php?dsetCategory=boundaries
 nf=read_sf("data/S_USA.AdministrativeForest/S_USA.AdministrativeForest.shp")
 bighorn=dplyr::filter(nf,FORESTNAME=="Bighorn National Forest") 
+```
 
+## Download elevation data
+```{r}
+library(rasterVis)
+
+centroid=st_coordinates(st_centroid(bighorn))
+dem=getData(name="SRTM",lat=centroid[2],lon=centroid[1],path="data") %>% 
+  crop(bighorn) %>% 
+  mask(bighorn)
+names(dem)="dem"
+
+tpi=terrain(dem,opt="TPI")
+slope=terrain(dem,opt="slope")
+aspect=terrain(dem,opt="aspect")
+
+terrain=stack(dem,slope,aspect,tpi)
+
+plot(terrain)
+
+```
+
+## Download FIA data
+```{r}
 # run once
 #fia=getFIA(states = c('WY'),dir = 'data/',load=F)
 
 fia_all=readFIA(states = c('WY'),dir = 'data/')
 
 fia <- clipFIA(fia_all, mostRecent = F, mask = bighorn)
+```
 
+
+## Map of FIA plots within the boundary
+```{r}
+gplot(dem)+
+  geom_raster(aes(fill=value))+
+  geom_sf(data=bighorn,inherit.aes = F,fill="transparent",col="red")+
+  geom_point(data=fia$PLOT,
+             mapping=aes(y=LAT,x=LON),inherit.aes = F)
 ```
 
 ```{r}
-
-ggplot(bighorn[1])+
-  geom_sf()+
-  geom_point(data=fia$PLOT,
-             mapping=aes(y=LAT,x=LON),inherit.aes = F)
-
 ## Spatial plots with biomass 
-bio_pltSF <- biomass(fia, byPlot = TRUE, returnSpatial = TRUE)
+bio_pltSF <- biomass(fia, byPlot = TRUE, bySpecies = TRUE, returnSpatial = TRUE)
+
+tpa_pltSF <- tpa(fia, byPlot = TRUE, bySpecies = TRUE, returnSpatial = TRUE)
+
 ```
 
 ```{r}
@@ -46,8 +76,20 @@ plot(bio_pltSF)
 ```
 
 
+## Extract terrain variables for each plot
 ```{r}
+env=extract(terrain, tpa_pltSF)
+tpa = bind_cols(tpa_pltSF,as.data.frame(env))
+```
+### Relative basal area along an environmental gradient
+```{r}
+ggplot(tpa,aes(y=BAA_PERC,x=aspect,col=COMMON_NAME))+
+  geom_point()+
+  ylab("Relative Basal Area")
+```
+
 ## Group estimates by species
+```{r}
 fia_species <- tpa(fia, bySpecies = TRUE)
 
 ## Group by species and size class, and plot the distribution 
